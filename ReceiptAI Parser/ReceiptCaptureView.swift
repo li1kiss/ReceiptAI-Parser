@@ -8,7 +8,8 @@
 //  - SwiftUI may not re-fire `onChange` if the user picks the **same** asset again while `selection` stays set.
 //  - We clear `selectedPhotoItem` in `defer` after loading so every pick produces a new change event.
 //
-//  `ImagePicker` is a thin `UIViewControllerRepresentable` wrapper around `UIImagePickerController` for camera access.
+//  `ImagePicker` wraps `UIImagePickerController`. The camera is shown with **fullScreenCover** (not a sheet) so the
+//  preview fills the display; a sheet detent often clips or mislays the camera preview.
 //
 
 import PhotosUI
@@ -55,10 +56,12 @@ struct ReceiptCaptureView: View {
         }
         .padding(14)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .sheet(isPresented: $isCameraPresented) {
+        .fullScreenCover(isPresented: $isCameraPresented) {
             ImagePicker(sourceType: .camera) { image in
                 onImagePicked(image)
             }
+            .ignoresSafeArea()
+            .background(Color.black)
         }
         .onChange(of: selectedPhotoItem) { _, item in
             guard let item else { return }
@@ -137,6 +140,11 @@ struct ImagePicker: UIViewControllerRepresentable {
         picker.sourceType = UIImagePickerController.isSourceTypeAvailable(sourceType) ? sourceType : .photoLibrary
         picker.delegate = context.coordinator
         picker.allowsEditing = false
+        // Camera preview assumes full-screen layout; avoids clipped / offset preview in compact presentations.
+        picker.modalPresentationStyle = .fullScreen
+        if picker.sourceType == .camera {
+            picker.cameraCaptureMode = .photo
+        }
         return picker
     }
 
